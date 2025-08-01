@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Color Mask Detection Dashboard</title>
+  <style>
+    body { 
+      text-align: center; 
+      font-family: 'Comic Sans MS', sans-serif;
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
+      margin: 0;
+      padding: 20px;
+    }
+    h2 { animation: pop 1s infinite alternate; }
+    @keyframes pop { 0%{transform:scale(1);}100%{transform:scale(1.05);} }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 340px);
+      gap: 15px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .frame {
+      position: relative;
+    }
+    .frame img {
+      width: 320px; height: 240px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      object-fit: cover;
+    }
+    .label {
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .button-group button {
+      padding: 10px 15px; margin: 5px;
+      border: none; border-radius: 20px; color:white;
+      cursor: pointer; font-size: 16px;
+    }
+    .blue-btn { background:#3b82f6; } 
+    .red-btn { background:#ef4444; } 
+    .green-btn { background:#22c55e; }
+  </style>
+</head>
+<body>
+  <h2>Please Allow Access to the Camera</h2>
+  <h2>This Website is Just a Way to Show How the Ball is Detected in the Backend</h2>
+  <h2>🎨 Select a Color and Give it 5 Seconds to Load🎨</h2>
+  <h2>TRY IT WITH DIFFERENT COLORED OBJECTS AND HAVE FUN!</h2>
+
+  <div class="button-group">
+    <button class="blue-btn" onclick="setColor('blue')">Blue</button>
+    <button class="red-btn" onclick="setColor('red')">Red</button>
+    <button class="green-btn" onclick="setColor('green')">Green</button>
+  </div>
+  <div id="selectedColorDisplay">Currently: <span style="color: blue;">Blue</span></div>
+
+  <video id="video" autoplay style="display:none;"></video>
+
+  <div class="grid">
+    <div class="frame"><img id="mask" src=""><div class="label">Color Mask</div></div>
+    <div class="frame"><img id="gray" src=""><div class="label">Grayscale</div></div>
+    <div class="frame"><img id="blur" src=""><div class="label">Blurred</div></div>
+    <div class="frame"><img id="canny" src=""><div class="label">Canny Edge</div></div>
+  </div>
+
+  <script>
+    let selectedColor = 'blue';
+    const colorDisplay = document.getElementById('selectedColorDisplay');
+
+    function setColor(color) {
+      selectedColor = color;
+      colorDisplay.innerHTML = `Currently: <span style="color:${color};">${color}</span>`;
+    }
+
+    const video = document.getElementById('video');
+    const imgMask = document.getElementById('mask');
+    const imgGray = document.getElementById('gray');
+    const imgBlur = document.getElementById('blur');
+    const imgCanny = document.getElementById('canny');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        setInterval(() => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = canvas.toDataURL('image/jpeg');
+
+          fetch('/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageData, color: selectedColor })
+          })
+          .then(res => res.json())
+          .then(data => {
+            imgMask.src = data.mask;
+            imgGray.src = data.gray;
+            imgBlur.src = data.blur;
+            imgCanny.src = data.canny;
+          });
+        }, 800); 
+      });
+  </script>
+
+</body>
+</html>
